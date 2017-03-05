@@ -1,0 +1,13 @@
+./location.py:44: Warning: Can't create database 'traffic_db'; database exists
+  cursor.execute("create database if not exists traffic_db")
+./location.py:47: Warning: Table 'location' already exists
+  cursor.execute("CREATE TABLE IF NOT EXISTS location(num INTEGER NOT NULL AUTO_INCREMENT,lon DOUBLE NOT NULL,lat DOUBLE NOT NULL,mac CHAR(12) NOT NULL UNIQUE,PRIMARY KEY (num))")
+[I 161222 13:25:55 web:1635] 200 POST /wifitraffic/location (114.255.40.23) 23.63ms
+[W 161222 16:25:57 web:1635] 404 GET /favicon.ico (114.255.40.30) 0.60ms
+[W 161226 10:09:49 web:1635] 404 GET /favicon.ico (114.255.40.30) 0.71ms
+[W 161226 11:24:51 web:1635] 404 GET /favicon.ico (114.255.40.30) 0.54ms
+[W 161226 15:51:44 web:1635] 404 GET /favicon.ico (114.255.40.30) 0.55ms
+[W 161226 19:06:17 web:1635] 404 GET /favicon.ico (114.255.40.37) 0.50ms
+[I 161226 20:37:06 web:1635] 200 POST /wifitraffic/location (114.255.40.57) 10.11ms
+[I 161226 20:42:04 web:1635] 200 POST /wifitraffic/location (114.255.40.57) 7.47ms
+[I 161226 21:29:24 web:1635] 200 POST /wifitraffic/location (114.255.40.57) 8.15ms

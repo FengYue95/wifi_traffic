@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>  
+<head>  
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />  
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />  
+<style type="text/css">
+html{height:100%;}
+body{height:100%;margin:0px;padding:0px}  
+#container{height:100%}  
+.anchorBL{display:none;}
+</style>
+<script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=Q3iFU5VmCqgB35gVUYi94UkQH1TwMhpx"></script>
+<script src="/static/jquery-3.0.0.js"></script>
+</head>
+<body>
+<div id="container"></div>
+<script type="text/javascript">
+
+var map=new BMap.Map("container");
+//var point=new BMap.Point(114.511533,36.645871);
+var point=new BMap.Point(116.49634, 39.914105);
+map.centerAndZoom(point,12);
+map.setMapStyle("light");
+map.addControl(new BMap.NavigationControl());
+map.enableScrollWheelZoom();//启动鼠标滚轮缩放地图
+map.enableKeyboard();//启动键盘操作地图
+//map.setZoom(15);
+var pts=new Array();
+var length;
+$.ajax({
+   url:"/show/getroad",
+   type:"POST",
+   //dataType:"json",
+   async:true,
+   success:function(data)
+   {
+     var result = eval("("+data+")");
+     length=result.length;
+     var cc=result[0]["sposition"];
+     var cc1=cc.split(",");
+     var scc=new BMap.Point(Number(cc1[0]),Number(cc1[1]));
+     map.centerAndZoom(scc,12);
+     for(var i=0;i<result.length;i++)
+    {
+     pts[i]=0;
+    }
+     var driving=new BMap.DrivingRoute(map, {policy:BMAP_DRIVING_POLICY_LEAST_DISTANCE});
+    for(var i=0;i<result.length;i++)
+     { 
+          var num=result[i]["sposition"];
+        var num1=num.split(",");
+        var spoint=new BMap.Point(Number(num1[0]),Number(num1[1]));
+        var num=result[i]["eposition"];
+        var num2=num.split(",");
+        var epoint=new BMap.Point(Number(num2[0]),Number(num2[1]));
+         driving.search(spoint, epoint);  
+      }
+      driving.setSearchCompleteCallback(function(){
+        var index=0;
+        var p=driving.getResults().getPlan(0).getRoute(0).getPath(); //通过�?车实例，获得一系列点的数组
+        var start=driving.getResults().getStart().point;
+        var end=driving.getResults().getEnd().point;
+        var pp=new BMap.Polyline(p);
+        pp.setStrokeColor("green");
+        pp.setStrokeWeight(6);
+        map.addOverlay(pp);
+        for(var i=0;i<result.length;i++)
+        {
+          var st=result[i]["sposition"];
+          var st1=st.split(",");
+          var ed=result[i]["eposition"];
+          var ed1=ed.split(",");
+          if((Number(st1[0])==start.lng)&&(Number(st1[1])==start.lat)&&(Number(ed1[0])==end.lng)&&(Number(ed1[1])==end.lat))
+          {
+               
+                 pts.splice(i,1,pp);
+          }
+        }
+      });
+    }
+
+});
+function changeColor()
+  {
+   $.ajax({
+                async : true,
+                url :"/show/level",
+                type : "post",
+                success: function(data){
+                 for(var i=0;i<length;i++)
+                 {
+                    switch(data[""+(i+1)])
+                    {
+                       case 1:
+                        pts[i].setStrokeColor("red");
+                        break;
+                       case 2:
+                        pts[i].setStrokeColor("orange");
+                        break;
+                       case 3:
+                        pts[i].setStrokeColor("yellow");
+                        break;
+                       case 4:
+                        pts[i].setStrokeColor("green");
+                        break;
+                       case 5:
+                        pts[i].setStrokeColor("green");
+                        break;
+                     }
+                  }
+                              }});
+  }
+setInterval(changeColor,60000);
+</script>
+</body>
+</html>

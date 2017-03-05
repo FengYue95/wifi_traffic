@@ -1,0 +1,544 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<style type="text/css">
+html{height:100%;}
+body{height:100%;margin:0px;padding:0px}
+#container{height:80%}
+div.aaa
+{
+  border:2px solid black;
+  overflow: scroll;
+}
+p
+{
+  margin: 0;
+  padding: 0;
+  border:0;
+  display:inline;
+}
+</style>
+<script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=Q3iFU5VmCqgB35gVUYi94UkQH1TwMhpx"></script>
+<script src="/static/jquery-3.0.0.js"></script>
+<script src="/static/py.js"></script>
+</head>
+<body>
+<div id="container"></div>
+<div id="a" style="width:30%;height:20%;border:1px solid black;margin:0;padding:0;overflow:scroll;float:left"></div>
+<button id="submit1" type="button" value="生成路网">生成路网</button>
+<script type="text/javascript">
+var hh=window.document.location.href;
+var host1=hh.split("/");
+var host=host1[2];
+window.onerror=null;
+  var count=1;
+var map=new BMap.Map("container");
+//var point=new BMap.Point(114.511533,36.645871);
+var point=new BMap.Point(114.488424, 36.662176);
+map.centerAndZoom(point,15);
+map.addControl(new BMap.NavigationControl());
+map.enableScrollWheelZoom();//启动鼠标滚轮缩放地图
+map.enableKeyboard();//启动键盘操作地图
+var icon1 = new BMap.Icon("http://api.map.baidu.com/img/markers.png", new BMap.Size(23, 25), {
+                        anchor: new BMap.Size(10, 25), // 指定定位位置
+                        imageOffset: new BMap.Size(0, 0 - 10 * 25) // 设置图片偏移
+                    });
+var icon2 = new BMap.Icon("http://api.map.baidu.com/img/markers.png", new BMap.Size(23, 25), {
+                        anchor: new BMap.Size(20, 40), // 指定定位位置
+                        imageOffset: new BMap.Size(0, 0 )
+                    });
+var icon3 = new BMap.Icon("http://api.map.baidu.com/img/markers.png", new BMap.Size(23, 25), {
+                        anchor: new BMap.Size(-10, 40), // 指定定位位置
+                        imageOffset: new BMap.Size(0, 0 )
+                    });
+//map.setZoom(15);
+var i=1;
+var lat,lng,target,city,connect;
+  var result=new Array();
+  var connection1=new Array();
+  var connect1=new Array();
+/*var dian="116.280562, 39.913953;116.289977, 39.91351;116.301691, 39.913787;116.335395, 39.913455;116.350487, 39.912902;116.36335, 39.912846;116.370106, 39.91257;116.380813, 39.913068;116.389365, 39.913068;116.399067, 39.9134;116.41344, 39.913953;116.424723, 39.914507;116.433706, 39.914175;116.442257, 39.914617;116.456559, 39.914285;116.46856, 39.914175;116.484658, 39.913787;116.496587, 39.913787;116.282431, 39.929945;116.281425, 39.938354;116.281281, 39.952847"*/
+//alert(dian);
+var dian="116.280562, 39.913953;116.289977, 39.91351;116.301691, 39.913787;"
+var order=new Array(0,2,1);
+var road=new Array(100000);
+var arr=dian.split(";");
+function one()
+{
+   var point=new BMap.Point(target.getPosition().lng,target.getPosition().lat);
+ var marker=new BMap.Marker(point,{enableDragging:true});
+  var myLabel=new BMap.Label("正向"+target.getLabel().getTitle(),     //为lable填写内容    
+     {offset:new BMap.Size(10,-10),                  //label的偏移量，为了让label                   的中心显示在点上  
+      position:point});
+ myLabel.setTitle("正向"+target.getLabel().getTitle());
+ marker.setLabel(myLabel);
+marker.setOffset(new BMap.Size(0,0));
+map.addOverlay(marker);
+map.addOverlay(myLabel);
+road[target.getLabel().getTitle()-1].zheng=marker;
+road[target.getLabel().getTitle()-1].fan=null;
+marker.addEventListener("dblclick",function(e)
+  {
+    //map.removeOverlay(e.target);
+   map.removeOverlay(e.target);
+  }
+  );
+marker.addEventListener("dragend",function(e)
+  {
+    var p=new BMap.Point(e.point.lng,e.point.lat);
+    e.target.setPosition(p);
+    //alert(e.target.getPosition().lat);
+    //e.traget.setPosition(p);
+    $("#a").text(e.point.lng+ ", " + e.point.lat);
+  }
+  );
+}
+function lert()
+{
+  var point=new BMap.Point(target.getPosition().lng,target.getPosition().lat);
+ var marker=new BMap.Marker(point,{enableDragging:true});
+  var myLabel=new BMap.Label("正向"+target.getLabel().getTitle(),     //为lable填写内容    
+     {offset:new BMap.Size(10,-10),                  //label的偏移量，为了让label                   的中心显示在点上  
+      position:point});
+ myLabel.setTitle("正向"+target.getLabel().getTitle());
+ marker.setLabel(myLabel);
+marker.setOffset(new BMap.Size(0,0));
+map.addOverlay(marker);
+map.addOverlay(myLabel);
+road[target.getLabel().getTitle()-1].zheng=marker;
+marker.addEventListener("dragend",function(e)
+  {
+    var p=new BMap.Point(e.point.lng,e.point.lat);
+    e.target.setPosition(p);
+    //alert(e.target.getPosition().lat);
+    //e.traget.setPosition(p);
+    $("#a").text(e.point.lng+ ", " + e.point.lat);
+  }
+  );
+marker.addEventListener("dblclick",function(e)
+  {
+    //map.removeOverlay(e.target);
+   map.removeOverlay(e.target);
+  }
+  );
+var point=new BMap.Point(target.getPosition().lng,target.getPosition().lat);
+ var marker=new BMap.Marker(point,{enableDragging:true});
+  var myLabel=new BMap.Label("反向"+target.getLabel().getTitle(),     //为lable填写内容    
+     {offset:new BMap.Size(10,-10),                  //label的偏移量，为了让label                   的中心显示在点上  
+      position:point});
+ myLabel.setTitle("反向"+target.getLabel().getTitle());
+ marker.setLabel(myLabel);
+map.addOverlay(marker);
+map.addOverlay(myLabel);
+marker.setOffset(new BMap.Size(0,0));
+road[target.getLabel().getTitle()-1].fan=marker;
+marker.addEventListener("dragging",function(e)
+  {
+    var p=new BMap.Point(e.point.lng,e.point.lat);
+    e.target.setPosition(p);
+    //alert(e.target.getPosition().lat);
+    //e.traget.setPosition(p);
+    $("#a").text(e.point.lng+ ", " + e.point.lat);
+  }
+  );
+marker.addEventListener("dblclick",function(e)
+  {
+    //map.removeOverlay(e.target);
+   map.removeOverlay(e.target);
+  }
+  );
+}
+function changedouhao(str){
+str=str.replace(/，/ig,',');
+return str;
+}
+function connection()
+ {
+   var nowNum=target.getLabel().getTitle();
+   var num1=prompt("请输入道路中与"+target.getLabel().getTitle()+"号AP点连通且相邻的AP点的编号,编号之间用逗号隔开","");
+   num1=changedouhao(num1);
+   num=""+nowNum+","+num1;
+   if(num!=null)
+   {
+
+      connect1[nowNum-1]=num;
+       var infoWindow =new BMap.InfoWindow("<div style='font-size:1px'>与"+nowNum+"号AP点相连AP点为"+num1+"</div>");  // 创建信息窗口对象，引号里可以书写任意的html语句。
+       target.addEventListener("click", function(){
+      this.openInfoWindow(infoWindow);
+       });
+       target.addEventListener("mouseout", function(){
+      this.closeInfoWindow(infoWindow);
+       });
+    target.setIcon(icon1);
+   }
+ }
+ function zhengli()
+  {
+    for(var i=0;i<connect1.length;i++)
+    { if(connect1[i])
+      {
+      var zhengli1=connect1[i].split(",");
+       for(var j=0;j<zhengli1.length-1;j++)
+       {
+          var mars=new Array();
+          mars.push(zhengli1[0]);
+          mars.push(zhengli1[j+1]);
+          mars.sort(function compare(a,b){return a-b;});
+          connection1.push(mars);
+       }
+      }
+    }
+    var hash = {};
+   var resultt = [];
+for(var i = 0, len = connection1.length; i < len; i++)
+{
+    if(!hash[connection1[i]]){
+        resultt.push(connection1[i]);
+        hash[connection1[i]] = true;
+    }
+}
+connection1=resultt;
+  }
+/*function connection()
+{
+   var nowNum=target.getLabel().getTitle();
+   var num=prompt("请输入道路中与"+target.getLabel().getTitle()+"号AP点连通且相邻的AP点的编号,编号之间用逗号隔开","");
+   num=changedouhao(num);
+   if(num!=null)
+   {
+     var conf=confirm("您选择的与"+target.getLabel().getTitle()+"号AP点连通的点为"+num);
+     if (conf==true)
+    {
+      connect=num.split(",");
+     for(var i=0;i<connect.length;i++)
+     {
+        var mars=new Array();
+        mars.push(nowNum);
+        mars.push(connect[i]);
+        mars.sort(function compare(a,b){return a-b;});
+        connection1.push(mars);
+     }
+    target.setIcon(icon1);
+    }
+  else
+    {
+    }
+   }
+    var tempObj = {};
+    for(var n in connection1)
+    {
+      var itemString = connection1[n].join("");
+      if(tempObj[itemString])
+      {
+       connection1.splice(n,1);
+      }
+      tempObj[itemString] = true;
+    }
+}*/
+$.ajax({
+   url:"/createRoadnet/location",
+   type:"POST",
+   //dataType:"json",
+   async:true,
+   success:function(data)
+   {
+     var check;
+     var result1=new Array();
+     var result2 = eval("("+data+")");
+ var ppppp=new BMap.Point(result2[0]["lon"],result2[0]["lat"]);
+map.centerAndZoom(ppppp,15);
+var count=new Array();
+for(var i=0;i<result2.length;i++)
+{
+  check=0;
+   for(var j=0;j<count.length;j++)
+   {
+    if(result2[i].num==count[j])
+    {
+      check=1;
+      break;
+    }
+   }
+if(check==0)
+{ 
+  count.push(result2[i].num);
+  result1.push(result2[i]);
+}
+}
+    for(var i=0;i<result1.length;i++)
+{
+var point=new BMap.Point(result1[i]["lon"],result1[i]["lat"]);
+ var marker=new BMap.Marker(point);
+ var contextMenu=new BMap.ContextMenu();
+var menuItem=new BMap.MenuItem("添加两个点",lert);
+var menuItem1=new BMap.MenuItem("选择连通点",connection);
+//var menuItem2=new BMap.MenuItem("添加一个点",one);
+menuItem.enable();
+contextMenu.addItem(menuItem1);
+//contextMenu.addItem(menuItem2);
+contextMenu.addItem(menuItem);
+ marker.addContextMenu(contextMenu);
+ var myLabel=new BMap.Label(""+(result1[i]["num"]),     //为lable填写内容    
+     {offset:new BMap.Size(10,-10),                  //label的偏移量，为了让label                   的中心显示在点上  
+      position:point});
+ myLabel.setTitle(""+(result1[i]["num"]));
+ marker.setLabel(myLabel);
+map.addOverlay(marker);
+map.addOverlay(myLabel);
+var biaoji=new Object();
+biaoji.normal=marker;
+biaoji.zheng=null;
+biaoji.fan=null;
+biaoji.zheng1=null;
+biaoji.fan1=null;
+road[result1[i]["num"]-1]=biaoji;
+
+
+marker.addEventListener("dragging",function(e)
+  {
+    $("#a").text(e.point.lng+ ", " + e.point.lat);
+  }
+  );
+marker.addEventListener("rightclick",function(e)
+  {
+    //map.removeOverlay(e.target);
+   target=e.target;
+  }
+  );
+}
+        }
+      });
+
+
+  function set()
+  {
+      zhengli();
+  for(var i=0;i<connection1.length;i++)
+  {
+       var rr=new Object();
+       var obj=new Object();
+       obj.slng=road[connection1[i][0]-1].zheng.getPosition().lng;
+       obj.slat=road[connection1[i][0]-1].zheng.getPosition().lat;
+       obj.elng=road[connection1[i][1]-1].zheng.getPosition().lng;
+       obj.elat=road[connection1[i][1]-1].zheng.getPosition().lat;
+      $.ajax({
+           url:"/createRoadnet/getArea",
+           type:"POST",
+           async:false,
+           data:obj,
+           success:function(data2)
+            {
+              var data1 = eval("("+data2+")");
+              city=data1.result.addressComponent.city;
+              rr.area=pinyin.getCamelChars(data1.result.addressComponent.district);
+              rr.name=data1.result.addressComponent.street;
+              //alert(rr.name);
+            }
+           });
+      obj.city=city;
+           $.ajax({
+            url:"/createRoadnet/distance",
+            type:"POST",
+            async:false,
+            data:obj,
+            success:function(data2)
+             {
+              var panduan=data2.split(";");
+              rr.length=Number(panduan[0]);
+              if(Number(panduan[1])==0)
+              {
+			 
+                rr.sap=connection1[i][0];
+                rr.eap=connection1[i][1];
+				 rr.sposition=""+road[connection1[i][0]-1].zheng.getPosition().lng+","+road[connection1[i][0]-1].zheng.getPosition().lat;
+               rr.eposition=""+road[connection1[i][1]-1].zheng.getPosition().lng+","+road[connection1[i][1]-1].zheng.getPosition().lat;
+                //alert(rr.sap);
+              }
+              if(Number(panduan[1])==1)
+              {
+		
+                rr.sap=connection1[i][1];
+                rr.eap=connection1[i][0];
+				 rr.sposition=""+road[connection1[i][1]-1].zheng.getPosition().lng+","+road[connection1[i][1]-1].zheng.getPosition().lat;
+                 rr.eposition=""+road[connection1[i][0]-1].zheng.getPosition().lng+","+road[connection1[i][0]-1].zheng.getPosition().lat;
+               // alert(rr.sap);
+              }
+            // alert(rr.length);
+             }
+             });
+           var patt1=new RegExp("高速");
+           var patt2=new RegExp("环");
+           if(patt1.test(rr.name))
+            {
+              rr.maxspeed=120;
+              rr.level=1;
+              rr.line1=30;
+              rr.line2=40;
+              rr.line3=60;
+              rr.line4=120;
+            }
+            else if(patt2.test(rr.name))
+            {
+              rr.maxspeed=80;
+              rr.level=2;
+              rr.line1=20;
+              rr.line2=40;
+              rr.line3=60;
+              rr.line4=80;
+            }
+            else
+            {
+              rr.maxspeed=60;
+              rr.level=3;
+              rr.line1=10;
+              rr.line2=20;
+              rr.line3=35;
+              rr.line4=60;
+            }
+         // alert(rr.maxspeed);
+            count++;
+            var obj1=new Object();
+            var rr1=new Object();
+            if(!(road[connection1[i][0]-1].fan==null))
+            {
+       obj1.slng=road[connection1[i][0]-1].fan.getPosition().lng;
+       obj1.slat=road[connection1[i][0]-1].fan.getPosition().lat;
+       obj1.elng=road[connection1[i][1]-1].fan.getPosition().lng;
+       obj1.elat=road[connection1[i][1]-1].fan.getPosition().lat;
+      $.ajax({
+           url:"/createRoadnet/getArea",
+           type:"POST",
+           async:false,
+           data:obj1,
+           success:function(data2)
+            { 
+			
+              var data1 = eval("("+data2+")");
+              city=data1.result.addressComponent.city;
+              rr1.area=pinyin.getCamelChars(data1.result.addressComponent.district);
+              rr1.name=data1.result.addressComponent.street;
+            }
+           });
+      obj1.city=city;
+           $.ajax({
+            url:"/createRoadnet/distance",
+            type:"POST",
+            async:false,
+            data:obj1,
+            success:function(data2)
+             {			
+              var panduan=data2.split(";");
+              rr1.length=Number(panduan[0]);
+              if(Number(panduan[1])==0)
+              {
+                rr1.sap=connection1[i][0];
+                rr1.eap=connection1[i][1];
+				 rr1.sposition=""+road[connection1[i][0]-1].fan.getPosition().lng+","+road[connection1[i][0]-1].fan.getPosition().lat;
+                 rr1.eposition=""+road[connection1[i][1]-1].fan.getPosition().lng+","+road[connection1[i][1]-1].fan.getPosition().lat;
+              }
+              if(Number(panduan[1])==1)
+              {
+                rr1.sap=connection1[i][1];
+                rr1.eap=connection1[i][0];
+				 rr1.sposition=""+road[connection1[i][1]-1].fan.getPosition().lng+","+road[connection1[i][1]-1].fan.getPosition().lat;
+                 rr1.eposition=""+road[connection1[i][0]-1].fan.getPosition().lng+","+road[connection1[i][0]-1].fan.getPosition().lat;
+              }
+              if(rr.sap==rr1.sap)
+              {
+                rr1.sap=rr.eap;
+                rr1.eap=rr.sap;
+              }
+              if(Math.abs(rr1.length-rr.length)>100)
+              {
+                if(rr1.length>rr.length)
+                {
+                  rr1.length=rr.length;
+                }
+                else
+                {
+                  rr.length=rr1.length;
+                }
+              }
+             }
+             });
+           var patt1=new RegExp("高速");
+           var patt2=new RegExp("环");
+           var patt3=new RegExp("线");
+           if(patt1.test(rr.name))
+            {
+              rr1.maxspeed=120;
+              rr1.level=1;
+              rr1.line1=30;
+              rr1.line2=40;
+              rr1.line3=60;
+              rr1.line4=120;
+            }
+            else if(patt2.test(rr.name)||patt3.test(rr.name))
+            {
+              rr1.maxspeed=80;
+              rr1.level=2;
+              rr1.line1=20;
+              rr1.line2=40;
+              rr1.line3=60;
+              rr1.line4=80;
+            }
+            else
+            {
+              rr1.maxspeed=60;
+              rr1.level=3;
+              rr1.line1=10;
+              rr1.line2=20;
+              rr1.line3=35;
+              rr1.line4=60;
+            }
+       //    alert(rr.maxspeed);
+            result.push(rr);
+            result.push(rr1);
+            count++;
+        }
+       }
+       $("#a").text("正在写入数据库");
+   abc=JSON.stringify(result);
+    $.ajax({
+            url:"/createRoadnet/sql",
+            type:"POST",
+            async:false,
+            data:{rr:abc},
+            success:function(data2)
+             {
+                result=[];
+                $("#a").text("路网生成成功");
+             }
+       });
+     }
+map.addEventListener("click",function(){
+ // alert(connection1.length);
+  //set();
+});
+$("#submit").click(function()
+ {
+ }
+  );
+$("#submit1").click(function()
+ {
+    $("#a").text("正在生成路网，请稍后");
+    setTimeout(set,1000);
+    //set();
+ }
+  );
+function abc()
+ {
+  /*for(var i=0;i<7;i++)
+   {
+    $("#a").append("<p>"+result[i].name+";"+result[i].area+";"+result[i].length+";"+result[i].maxspeed+";"+result[i].line1+";"+result[i].line2+";"+"</p>");
+   } */
+
+
+ }
+</script>
+</body>
+</html>
+
+

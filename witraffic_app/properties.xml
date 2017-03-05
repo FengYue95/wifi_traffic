@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<properties>
+    <mysql_uesrname>root</mysql_uesrname>
+    <mysql_password>12345</mysql_password>
+	<update_time_interval>300</update_time_interval>
+</properties>
