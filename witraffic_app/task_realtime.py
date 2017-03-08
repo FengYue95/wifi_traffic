@@ -1,12 +1,13 @@
 #coding=utf-8
 
 from isincreasedorder import *
-from  rssi import *
+from rssi import *
 from history import gethistory
 from mysql_utils import *
 from traffic_index import *
 from mongodb_utils import *
 from getProperties import get_update_time_interval
+from datamerge import *
 from getpath import get_current_dir
 
 import numpy as np
@@ -36,8 +37,8 @@ def timestamp2str(timestamp):
 #数据处理任务
 def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
     #从字典seg里提取路段各参数
-    startAP=str(seg['startAPid'])
-    endAP=str(seg['endAPid'])
+    startPoint=str(seg['startAPid'])
+    endPoint=str(seg['endAPid'])
     segmentid=str(seg['segmentid'])
     distance=seg['dist']
     maxspeed=seg['max_speed']
@@ -50,9 +51,6 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
     if not os.path.exists(resultfolder+segmentid):
         os.makedirs(resultfolder+segmentid)
 
-
-    node1_path=sourcefolder+getMacByAPid(startAP)+"/"+date
-    node2_path=sourcefolder+getMacByAPid(endAP)+"/"+date
     #候选集时间片长度
     T=20
     #计算速度用的数据时间片长度t
@@ -60,16 +58,29 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
     begintime=current_time-60*T
     endtime=current_time
 
-    #从原始数据文件里读取数据填入数据框，并为其取字段名字
-    name=['mac','signal','time']
-    node1_df=pd.read_table(node1_path,names=name,sep='|',header=None)
-    node2_df=pd.read_table(node2_path,names=name,sep='|',header=None)
+    #获得路段起始地点包含的所有AP的融合数据集（已经按时间排好序）
+    startMacs=getMacListByAPid(startPoint)
+    node1_path_list=get_node_path_list(startMacs,sourcefolder,date)
+    df_list_1=[]
+    for path in node1_path_list:
+        df=get_df_by_path(path)
+        df_list_1.append(df)
+    node1_df=merge_datafeame(df_list_1).sort_values(by=['time'])
+
+
+    #获得路段终止地点包含的所有AP的融合数据集(已经按时间排好序）
+    endMacs=getMacListByAPid(endPoint)
+    node2_path_list=get_node_path_list(endMacs,sourcefolder,date)
+    df_list_2=[]
+    for path in node2_path_list:
+        df=get_df_by_path(path)
+        df_list_2.append(df)
+    node2_df=merge_datafeame(df_list_2).sort_values(by=['time'])
+
     #截取T分钟的数据量
     node1_df=node1_df[(node1_df.time<endtime)&(node1_df.time>begintime)]
     node2_df=node2_df[(node2_df.time<endtime)&(node2_df.time>begintime)]
-    #按时间排序
-    node1_df=node1_df.sort_values(by=['time'])
-    node2_df=node2_df.sort_values(by=['time'])
+
     #选出共同mac集
     macset=list(set(node1_df.mac).intersection(set(node2_df.mac)))
     output_mac=[]
@@ -79,7 +90,7 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
     for mac in macset:
         t1=list(node1_df['time'][node1_df.mac==mac])
         t2=list(node2_df['time'][node2_df.mac==mac])
-
+        #判断是否在时间T内在被考察路段来回移动
         if isincreasedorder(t1+t2)or isincreasedorder(t2+t1):
             labeltime1=max(t1)
             labeltime2=min(t2)
@@ -96,9 +107,9 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
             speed=3.6*(distance+dist2-dist1)/delta_t
             output_speed.append(speed)
             i=i+1
-
+    #如果没有捕捉到mac的情况
     if i==0:
-        return [None,endtime,0,3,0.0]
+        return [None,endtime,0,5,0.0]
 
 
     #经过两点的mac信息
@@ -169,7 +180,7 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
         state=1
 
 
-
+    #计算路段交通指数，越高越拥堵
     segment_index=10.0*(maxspeed-speed_result)/maxspeed
 
 

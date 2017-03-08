@@ -27,6 +27,8 @@ def getsegmentlist():
         return results
     except MySQLdb.Error,e:
         print "Mysql Error %d: %s" % (e.args[0], e.args[1])
+        cur.close()
+        conn.close()
 
 #从数据库获取指定分区路段信息列表
 def get_segmentlist_of_area(area):
@@ -50,7 +52,8 @@ def get_segmentlist_of_area(area):
         return results
     except MySQLdb.Error,e:
         print "Mysql Error %d: %s" % (e.args[0], e.args[1])
-
+        cur.close()
+        conn.close()
 
 
 
@@ -69,12 +72,13 @@ def upload2mysql(sql_list):
            # 提交到数据库执行
            conn.commit()
 
-
        #关闭游标和链接
        cursor.close()
        conn.close()
     except MySQLdb.Error,e:
         print "Mysql Error %d: %s" % (e.args[0], e.args[1])
+        cursor.close()
+        conn.close()
 
 #获得路网覆盖的各区域板块名称
 def getAreas():
@@ -87,7 +91,7 @@ def getAreas():
     print arealist
     return arealist
 
-#由探针编号获得探针mac
+#由探针编号获得一个探针mac
 def getMacByAPid(APid):
     try:
         user=get_username_and_password()['user']
@@ -107,5 +111,33 @@ def getMacByAPid(APid):
         return result['mac']
     except MySQLdb.Error,e:
         print "Mysql Error %d: %s" % (e.args[0], e.args[1])
+        cur.close()
+        conn.close()
 
-print getMacByAPid(7)
+
+def getMacListByAPid(APid):
+    mac_list=[]
+    try:
+        user=get_username_and_password()['user']
+        passwd=get_username_and_password()['passwd']
+        # 打开数据库连接
+        #  使用cursor()方法获取操作游标,指定游标的类型为MySQLdb.cursors.DictCursor则结果集以字典返回，带有字段名；不知名类型则默认以元组返回，无字段名
+        conn=MySQLdb.connect(host='localhost',user=user,passwd=passwd,db='traffic_db',port=3306)
+        cur=conn.cursor(MySQLdb.cursors.DictCursor)
+        #执行sql语句
+        cur.execute("select * from location where num="+str(APid))
+        #获得一条结果
+        results=cur.fetchall()
+        #必须提交请求
+        conn.commit()
+        cur.close()
+        conn.close()
+        for result in results:
+            mac_list.append(result['mac'])
+
+        return mac_list
+    except MySQLdb.Error,e:
+        print "Mysql Error %d: %s" % (e.args[0], e.args[1])
+        cur.close()
+        conn.close()
+

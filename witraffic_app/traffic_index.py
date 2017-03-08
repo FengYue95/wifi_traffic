@@ -57,7 +57,6 @@ def get_traffic_index_of_area(timestr,area):
 
 #求某段路拥堵指数
 def get_segment_index(realspeedlist,seg):
-    print realspeedlist[str(seg['segmentid'])]
     realspeed=realspeedlist[str(seg['segmentid'])]
     maxspeed=seg['max_speed']
     segment_index=10*(maxspeed-realspeed)/maxspeed
