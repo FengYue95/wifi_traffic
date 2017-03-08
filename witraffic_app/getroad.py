@@ -56,11 +56,26 @@ class LevelHandler(tornado.web.RequestHandler):
         self.write(j)
 
 
+
+class BuptHandler(tornado.web.RequestHandler):
+    def post(self):
+        url = "http://139.129.110.99:8800/wifitraffic/speed_by_uri/bydate/20160625";
+        #执行URL获取返回值
+        req = urllib2.Request(url)
+        res_data = urllib2.urlopen(req)
+        res = res_data.read()
+        #将返回值解析成json格式
+        j = json.loads(res)
+        self.write(j)
+
+
+
 #鍦板潃鏄犲皠
 url = [
 (r'/show', ShowHandler),
 (r'/show/getroad', GetRoadHandler),
 (r'/show/level', LevelHandler),
+(r'/show/bupt', BuptHandler),
 ]
 #璁剧疆璺緞
 settings = dict(

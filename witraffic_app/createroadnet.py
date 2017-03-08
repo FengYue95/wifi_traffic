@@ -17,26 +17,28 @@ from getProperties import get_username_and_password
 reload(sys)
 sys.setdefaultencoding("utf-8")
 
+define("port", default = 8801, help="run on the given port", type = int)
+
 #访问路网生成页面
 class IndexHandler(tornado.web.RequestHandler):
     def get(self):
         self.render("createRoadnet.html")
 
-#获取距离的函�?
+#获取距离的函数
 class DistanceHandler(tornado.web.RequestHandler):
     def post(self):
-        #获取城市�?
+        #获取城市名
         city = self.get_argument("city")
-        #获取起点经纬�?
+        #获取起点经纬度
         slat = self.get_argument("slat")
         slng = self.get_argument("slng")
-        #获取终点经纬�?
+        #获取终点经纬度
         elat = self.get_argument("elat")
         elng = self.get_argument("elng")
         #百度地图获取距离提供的URL
         url = "http://api.map.baidu.com/direction/v1?mode=driving&origin="+slat+","+slng+"&destination="+elat+","+elng+\
               "&origin_region="+city+"&destination_region="+city+"&output=json&ak=Q3iFU5VmCqgB35gVUYi94UkQH1TwMhpx";
-        #执行URL获取返回�?
+        #执行URL获取返回值
         req = urllib2.Request(url)
         res_data = urllib2.urlopen(req)
         res = res_data.read()
@@ -44,54 +46,50 @@ class DistanceHandler(tornado.web.RequestHandler):
         j = json.loads(res)
         #获取距离
         a=j["result"]["routes"][0]["distance"]
-        #获取反向的距�?
-        url1 = "http://api.map.baidu.com/direction/v1?mode=driving&origin=" + elat + "," + elng + "&destination=" + slat + "," + slng + \
+        #获取反向的距离
+        url1 = "http://api.map.baidu.com/direction/v1?mode=driving&origin=" + slat + "," + slng + "&destination=" + elat + "," + elng + \
               "&origin_region=" + city + "&destination_region=" + city + "&output=json&ak=Q3iFU5VmCqgB35gVUYi94UkQH1TwMhpx";
         req1 = urllib2.Request(url1)
         res_data1 = urllib2.urlopen(req1)
         res1 = res_data1.read()
         j1 = json.loads(res1)
         b= j1["result"]["routes"][0]["distance"]
-        mark=j["result"]["routes"][0]["steps"][0]["path"]
-        arr=mark.split(";")
-        a1=len(arr)
-        mark1=j1["result"]["routes"][0]["steps"][0]["path"]
-        arr1=mark1.split(";")
-        b1=len(arr1)
-        #将正向和反向距离进行比较，确定�?�点和终�?
-        if a1<b1:
+        #将正向和反向距离进行比较，确定起点和终点
+        if a<=b:
               c=a
-              type=1
+              type=0
         else:
               c=b
-              type=0
+              type=1
         if c > 3000:
               c = random.randint(1000, 2000)
               self.write(str(c)+";"+str(type))
         else:
               self.write(str(c)+";"+str(type))
 
-
-#从location数据表获取AP�?
+#从location数据表获取AP点
 class LocationHandler(tornado.web.RequestHandler):
     def post(self):
         user=get_username_and_password()['user']
         passwd=get_username_and_password()['passwd']
         print "exc"
         try:
-            #连接数据�?
+            #连接数据库
             conn = MySQLdb.connect(host='localhost', port=3306, user=user, passwd=passwd, db='traffic_db', cursorclass = MySQLdb.cursors.DictCursor)
             cur = conn.cursor()
-            #查询数据�?
+            #查询数据库
             cur.execute("select * from location")
-            #获取返回�?
+            #获取返回值
             results = cur.fetchall()
             #解析为json格式
             arr = json.dumps(results)
             self.write(arr)
+            cur.close()
             conn.close()
         except MySQLdb.Error,e:
             print "Mysql Error %d: %s" % (e.args[0], e.args[1])
+            cur.close()
+            conn.close()
 
 #将路网写入数据库
 class SqlHandler(tornado.web.RequestHandler):
@@ -102,25 +100,25 @@ class SqlHandler(tornado.web.RequestHandler):
         length=len(data)
         user=get_username_and_password()['user']
         passwd=get_username_and_password()['passwd']
-        #循环迭代每条路段的数�?
+        #循环迭代每条路段的数据
         for i in range(0,length,1):
             #起点ap
             sap =data[i]["sap"]
             #终点ap
             eap =data[i]["eap"]
-            #起点经纬�?
+            #起点经纬度
             sposition =data[i]["sposition"]
-            #终点经纬�?
+            #终点经纬度
             eposition =data[i]["eposition"]
-            #路段�?
+            #路段名
             name =data[i]["name"]
-            #区域�?
+            #区域名
             area =data[i]["area"]
             #道路等级
             level =data[i]["level"]
             #道路长度
             dist =data[i]["length"]
-            #最大限�?
+            #最大限速
             maxspeed =data[i]["maxspeed"]
             #速度等级
             line1 =data[i]["line1"]
@@ -130,7 +128,7 @@ class SqlHandler(tornado.web.RequestHandler):
 
 
             try:
-                #连接数据�?
+                #连接数据库
                 conn = MySQLdb.connect(host='localhost', port=3306, user=user, passwd=passwd, db='traffic_db', charset="utf8")
                 cur = conn.cursor()
                 #若表不存在则建表
@@ -158,20 +156,22 @@ class SqlHandler(tornado.web.RequestHandler):
                 if count>=1:
                     sql="UPDATE roadnet SET dist=%s,level=%s,max_speed=%s,line1=%s,line2=%s,line3=%s,line4=%s,area=%s,sposition=%s,eposition=%s,name=%s where startAPid=%s and endAPid=%s"
                     cur.execute(sql,(dist,level,maxspeed,line1,line2,line3,line4,area,sposition,eposition,name,sap,eap))
-                    cur.close()
                     conn.commit()
+                    cur.close()
                     conn.close()
                 else:
                     sql="INSERT INTO roadnet (startAPid, endAPid, dist, level, max_speed, line1, line2, line3, line4, area, sposition, eposition, name) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
                     cur.execute(sql,(sap,eap,dist,level,maxspeed,line1,line2,line3,line4,area,sposition,eposition,name))
-                    cur.close()
                     conn.commit()
+                    cur.close()
                     conn.close()
                 self.write("success")
             except MySQLdb.Error,e:
                 print "Mysql Error %d: %s" % (e.args[0], e.args[1])
+                cur.close()
+                conn.close()
 
-#获取区域�?
+#获取区域名
 class GetAreaHandler(tornado.web.RequestHandler):
     def post(self):
         lat = self.get_argument("elat")
@@ -182,6 +182,7 @@ class GetAreaHandler(tornado.web.RequestHandler):
         res_data = urllib2.urlopen(req)
         res = res_data.read()
         self.write(res)
+
 #地址映射
 url = [
 (r'/createRoadnet', IndexHandler),
@@ -190,6 +191,7 @@ url = [
 (r'/createRoadnet/location', LocationHandler),
 (r'/createRoadnet/sql', SqlHandler),
 ]
+
 #设置路径
 settings = dict(
 template_path = os.path.join(os.path.dirname(__file__), "templates"),
@@ -202,12 +204,8 @@ handlers = url,
 )
 
 
-
-define("port", default = 8801, help="run on the given port", type = int)
-def main():
+if __name__ == "__main__":
     tornado.options.parse_command_line()
     http_server = tornado.httpserver.HTTPServer(application)
     http_server.listen(options.port)
     tornado.ioloop.IOLoop.instance().start()
-if __name__ == "__main__":
- main()

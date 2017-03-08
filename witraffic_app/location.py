@@ -16,12 +16,13 @@ define("port", default=8900, help="run on the given port", type=int)
 class Loaction_Handler(tornado.web.RequestHandler):
 
      def post(self):
-        #从手机端报文里获取mac，lon，lat参量
+        #从手机端报文里获取num，mac，lon，lat参量
+        num=str(self.get_argument('num'))
         mac = str(self.get_argument('mac'))
         lon=str(self.get_argument('lon'))
         lat=str(self.get_argument('lat'))
         #插入数据库并获取返回
-        response=uploadlocation(mac,lon,lat)
+        response=uploadlocation(num,mac,lon,lat)
 
         print response
         self.write(str(response))
@@ -32,7 +33,7 @@ class Loaction_Handler(tornado.web.RequestHandler):
 
 
 #上载数据到数据库
-def uploadlocation(mac,lon,lat):
+def uploadlocation(num,mac,lon,lat):
     try:
        user=get_username_and_password()['user']
        passwd=get_username_and_password()['passwd']
@@ -44,7 +45,7 @@ def uploadlocation(mac,lon,lat):
        cursor.execute("create database if not exists traffic_db")
        conn.select_db('traffic_db')
        #若表不存在则建表
-       cursor.execute("CREATE TABLE IF NOT EXISTS location(num INTEGER NOT NULL AUTO_INCREMENT,lon DOUBLE NOT NULL,lat DOUBLE NOT NULL,mac CHAR(12) NOT NULL UNIQUE,PRIMARY KEY (num))")
+       cursor.execute("CREATE TABLE IF NOT EXISTS location(num int(4) NOT NULL,lon DOUBLE NOT NULL,lat DOUBLE NOT NULL,mac CHAR(12) NOT NULL UNIQUE,PRIMARY KEY (mac))")
        conn.commit()
 
        #查询数据库里是否已经存在该探针记录
@@ -54,14 +55,14 @@ def uploadlocation(mac,lon,lat):
 
        if recordcount>0:
            #执行更新语句
-           print 'update location set lon='+lon+',lat='+lat+" where mac='"+mac+"'"
-           cursor.execute('update location set lon='+lon+',lat='+lat+" where mac='"+mac+"'")
+           print 'update location set num='+num+',lon='+lon+',lat='+lat+" where mac='"+mac+"'"
+           cursor.execute('update location set num='+num+',lon='+lon+',lat='+lat+" where mac='"+mac+"'")
            conn.commit()
            response=cursor.execute("SELECT * FROM location WHERE mac='"+mac+"'")
            conn.commit()
        else:
            # 执行插入语句
-           response=cursor.execute('INSERT INTO location VALUES(null,'+lon+','+lat+",'"+mac+"')")
+           response=cursor.execute('INSERT INTO location VALUES('+num+','+lon+','+lat+",'"+mac+"')")
            conn.commit()
 
        cursor.close()
@@ -69,6 +70,9 @@ def uploadlocation(mac,lon,lat):
        return response
     except MySQLdb.Error,e:
         print "Mysql Error %d: %s" % (e.args[0], e.args[1])
+        cursor.close()
+        conn.close()
+
 
 
 if __name__ == "__main__":
