@@ -9,6 +9,7 @@ from mongodb_utils import *
 from getProperties import get_update_time_interval
 from datamerge import *
 from getpath import get_current_dir
+from kmeans_sklearn import clusting
 
 import numpy as np
 import pandas as pd
@@ -54,10 +55,10 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
     if not os.path.exists(resultfolder+segmentid):
         os.makedirs(resultfolder+segmentid)
 
-    #候选集时间片长度
-    T=20
+    #候选集时间片长度,当前时刻往前T分钟,最低车速按3km/h,确保最低车速也可通过路段
+    T=distance*0.02
     #计算速度用的数据时间片长度t
-    t=15
+    t=T
     begintime=current_time-60*T
     endtime=current_time
 
@@ -85,7 +86,7 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
     node1_df=node1_df[(node1_df.time<endtime)&(node1_df.time>begintime)]
     node2_df=node2_df[(node2_df.time<endtime)&(node2_df.time>begintime)]
 
-    #选出共同mac集
+    #选出首尾节点共同mac集
     macset=list(set(node1_df.mac).intersection(set(node2_df.mac)))
     output_mac=[]
     output_time=[]
@@ -108,6 +109,7 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
             output_time.append(int(np.mean([labeltime1,labeltime2])))
             #计算各个mac平均速度
             delta_t=(labeltime2-labeltime1)
+            #speed单位km/h, 3.6是由m/min转km/h的准换因素
             speed=3.6*(distance+dist2-dist1)/delta_t
             output_speed.append(speed)
             i=i+1
@@ -120,7 +122,7 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
     #经过两点的mac信息
     middle_df=pd.DataFrame({'mac':output_mac,'speed':output_speed,'time':output_time})
     #速度过滤阈值
-    min_speed_limit=10
+    min_speed_limit=0
     max_speed_limit=maxspeed
     #速度过滤
     middle_df=middle_df[(middle_df.speed>=min_speed_limit)&(middle_df.speed<=max_speed_limit)]
@@ -159,18 +161,24 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
     #历史统计数据写入对应路段文件夹下
     statistic_df.to_csv(resultfolder+segmentid+'/'+'history_statistic_'+str(endtime),sep='|',index=None,header=None)
 
+    #聚类结果
+    target_mac_set=clusting(resultfolder+segmentid+'/'+'history_statistic_'+str(endtime))
+    #提取目标mac的记录
+    middle_df=middle_df[middle_df.mac.isin(target_mac_set)]
 
 
     #路段速度确定
+    #如果mac少于10个，取平均速度和最高限速的折中值，否则取平均速度
     if mac_count<10:
         speed_result=(maxspeed+np.mean(middle_df.speed))/2.0
     else:
         speed_result=np.mean(middle_df.speed)
-
+    #如果求出来的速度>最大限速，取最大限速
     if speed_result>maxspeed:
         speed_result=maxspeed
 
     #路段拥堵评定，数字越高越畅通
+    #共5级
     if mac_count<=5:
         state=5
     elif speed_result>line4:
@@ -183,8 +191,6 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
         state=2
     else:
         state=1
-
-
 
     segment_index=10.0*(maxspeed-speed_result)/maxspeed
 
@@ -278,15 +284,12 @@ def fatherthread():
 
         timestr=time.strftime('%Y%m%d%H%M%S',time.localtime(current_time))
 
-
         speed_d={'time':timestr}
         mac_d={'time':timestr}
         state_d={'time':timestr}
         congestion_index_d={'time':timestr}
         #获取历史速度数据(不含当前)
         his_df=gethistory(current_time,resultfolder)
-
-
 
 
         #耗时计算的起始时刻
@@ -339,38 +342,45 @@ def fatherthread():
         print state_d
         print congestion_index_d
 
+
+
+        #车流量
         insert_maccount(mac_d)
+        #速度
         insert_speed(speed_d)
+        #状态
         insert_state(state_d)
+        #拥堵指数
         insert_congestion_index(congestion_index_d)
 
 
-
+        #交通指数
         traffic_index=get_traffic_index(timestr)
+        #路网拥堵比率
         congrestion_rate=get_congrestion_rate(timestr)
 
         traffic_state_dict={'time':timestr,'traffic_index':traffic_index,'congrestion_rate':congrestion_rate}
 
+        #区域交通指数
         area_name=getAreas()
-
         for area in area_name:
             area_dict={area:get_traffic_index_of_area(timestr,area)}
             traffic_state_dict=dict(traffic_state_dict,**area_dict)
 
         print traffic_state_dict
-
+        #交通状态指标插入数据库
         insert_traffic_state(traffic_state_dict)
 
-
-
-
-
+        #标记耗时
         time_cost=time.time()-start_time
         print "用时"+str(time_cost)
+        #线程休眠，
+        # 休眠间隔与更新周期相关
         sleeptime=get_update_time_interval()['update_time']-time_cost
         if sleeptime<0:
             sleeptime=0
         time.sleep(sleeptime)
+        #更新当前时间
         current_time=current_time+get_update_time_interval()['update_time']
 
 
@@ -379,9 +389,12 @@ def start_process():
       print 'Starting',multiprocessing.current_process().name
 
 if __name__ == '__main__':
-
     father_t=threading.Thread(target=fatherthread,args=())
+    #将父线程设为守护线程
     father_t.setDaemon(True)
+    #启动父线程
     father_t.start()
+    #主线程要等待父线程执行完才退出
     father_t.join()
+    print "测试结束"
 

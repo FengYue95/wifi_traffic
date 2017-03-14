@@ -9,6 +9,7 @@ from mongodb_utils import *
 from getProperties import get_update_time_interval
 from datamerge import *
 from getpath import get_current_dir
+from kmeans_sklearn import clusting
 
 import numpy as np
 import pandas as pd
@@ -18,7 +19,6 @@ import Queue
 import math
 import multiprocessing
 import os
-
 
 
 
@@ -51,10 +51,10 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
     if not os.path.exists(resultfolder+segmentid):
         os.makedirs(resultfolder+segmentid)
 
-    #候选集时间片长度
-    T=20
+    #候选集时间片长度,单位分钟
+    T=distance*0.02
     #计算速度用的数据时间片长度t
-    t=15
+    t=T
     begintime=current_time-60*T
     endtime=current_time
 
@@ -94,9 +94,10 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
         if isincreasedorder(t1+t2)or isincreasedorder(t2+t1):
             labeltime1=max(t1)
             labeltime2=min(t2)
-            #rssi转距离，距离修正
+            #读取rssi
             rssi1=np.mean(list(node1_df['signal'][node1_df.time==labeltime1]))
             rssi2=np.mean(list(node2_df['signal'][node2_df.time==labeltime2]))
+            #rssi转距离，距离修正
             dist1=rssi2dist(rssi1)
             dist2=rssi2dist(rssi2)
 
@@ -114,8 +115,9 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
 
     #经过两点的mac信息
     middle_df=pd.DataFrame({'mac':output_mac,'speed':output_speed,'time':output_time})
-    #速度过滤阈值
-    min_speed_limit=10
+    #速度过滤阈值下限
+    min_speed_limit=0
+    #速度过滤阈值上限
     max_speed_limit=maxspeed
     #速度过滤
     middle_df=middle_df[(middle_df.speed>=min_speed_limit)&(middle_df.speed<=max_speed_limit)]
@@ -123,7 +125,7 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
     mac_count=len(middle_df.mac)
     #截取近10分钟
     middle_df=middle_df[(middle_df.time>=endtime-t*60)&(middle_df.time<=endtime)]
-    # print '当前十分钟速度数据'
+    # print '当前t分钟速度数据'
     # print(middle_df)
     #将当前速度写入文件，以逗号隔开，去掉行索引，不带列名写入
     middle_df.to_csv(resultfolder+segmentid+'/'+str(endtime),sep=',',index=None,header=None)
@@ -135,6 +137,7 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
     new_his_df=pd.concat([his_df,middle_df],ignore_index=True)
     new_his_df=new_his_df.drop('time',axis=1)
     print "去重前历史条数"+str(len(new_his_df))
+    #历史数据去重
     new_his_df= new_his_df.drop_duplicates()
     new_his_df=new_his_df.sort_values(by=['mac'])
     print "去重后历史条数"+str(len(new_his_df))
@@ -144,16 +147,25 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
     his_len=[]
     #针对当前测到的所有mac，求其历史均值方差和历史样本大小
     for mac in middle_df.mac:
+        #提取某个mac的历史速度记录
         mac_his_speed=list(new_his_df['speed'][new_his_df.mac==mac])
+        #求方差
         his_var.append("%.3f" % np.var(mac_his_speed))
+        #求均值
         his_mean.append("%.3f" % np.mean(mac_his_speed))
+        #求经过路段数
         his_len.append(len(mac_his_speed))
     #历史统计数据
     statistic_df=pd.DataFrame({'mac':middle_df.mac,'current_speed':middle_df.speed,'his_var':his_var,'his_mean':his_mean,'his_len':his_len,'segid':segmentid})
+    #按mac排序
     statistic_df=statistic_df.sort_values(by=['mac'])
     #历史统计数据写入对应路段文件夹下
     statistic_df.to_csv(resultfolder+segmentid+'/'+'history_statistic_'+str(endtime),sep='|',index=None,header=None)
 
+    #聚类并获得结果
+    target_mac_set=clusting(resultfolder+segmentid+'/'+'history_statistic_'+str(endtime))
+    #提取目标mac的记录
+    middle_df=middle_df[middle_df.mac.isin(target_mac_set)]
 
 
     #路段速度确定
@@ -161,7 +173,7 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
         speed_result=(maxspeed+np.mean(middle_df.speed))/2.0
     else:
         speed_result=np.mean(middle_df.speed)
-
+    #如果算出来speed_result大于最大限速，则取最大限速为路段通行速度
     if speed_result>maxspeed:
         speed_result=maxspeed
 
@@ -188,7 +200,7 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
     print result
     return result
 
-#分块
+#任务分块
 def separation(size,block_size):
     block_q=Queue.Queue()
     block_count=int(math.ceil(float(size)/block_size));
@@ -230,7 +242,6 @@ def sonthread(input):
         #由task返回结果拼sql语句
         m_dict[str(seg['segmentid'])]=taskresult[2]
 
-
         if taskresult[0] is None or str(taskresult[0])=="nan":
             s_dict[str(seg['segmentid'])]=seg['max_speed']
             congestion_index_dict[str(seg['segmentid'])]=0.0
@@ -253,7 +264,7 @@ def fatherthread():
     #当前日期，格式yyyymmdd
     date=timestamp2date(current_time)
     #探针数据目录
-    sourcefolder=get_current_dir()+"/new_wifiboxdata/"
+    sourcefolder=get_current_dir()+"/WiFiData/"
     #数据处理结果存放目录
     resultfolder=get_current_dir()+"/data/wifiresult/"
 
@@ -263,6 +274,8 @@ def fatherthread():
 
 
     #循环执行计算任务，每5分钟计算一次
+    #更新周期可以在配置文件中设定
+    #该程序是用于真正的实时数据处理的，作为一个服务一直执行
     while True:
         print "当前时间："+timestamp2str(current_time)
 
