@@ -4,6 +4,8 @@
 &#8195;&#8195;移动设备使用者携带移动设备在路网中移动，只要其设备的Wi-Fi是开启的，就会每隔一段时间向外发送Wi-Fi请求包。利用部署在路网交叉点，拐弯点，高速出口等关键地方的Wi-Fi探针捕捉路过探针信号覆盖范围内的移动设备的Wi-Fi请求包，便可获得对应移动设备的时空数据，再结合用户与移动设备位置变化的一致性，就可以获得用户的大致位置信息，从而进行进一步处理，得到比较准确的交通路况信息。
 
 * 系统部署教程：https://wifitraffic.github.io/wifi_traffic/index.html
+* 技术白皮书：https://wifitraffic.github.io/wifi_traffic/whitePaper.html
+* 产品说明书：https://wifitraffic.github.io/wifi_traffic/specification.html
 * 用户使用手册（含在线测试）：http://139.129.110.99:81/api_doc/api_doc.html
 * 部署定位app下载：https://github.com/wifiTraffic/wifi_traffic/blob/master/app-debug.apk
-* 技术白皮书：https://wifitraffic.github.io/wifi_traffic/whitePaper.html
+
