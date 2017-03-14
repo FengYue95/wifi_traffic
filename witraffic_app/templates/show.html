@@ -15,55 +15,81 @@ body{height:100%;margin:0px;padding:0px}
 <body>
 <div id="container"></div>
 <script type="text/javascript">
-
-var map=new BMap.Map("container");
-//var point=new BMap.Point(114.511533,36.645871);
+//初始化地图容器
+var map=new BMap.Map("container"); 
+//初始化地图中心点 
 var point=new BMap.Point(116.49634, 39.914105);
-map.centerAndZoom(point,12);
-map.setMapStyle("light");
+//设置中心点
+map.centerAndZoom(point,15);
+//设置允许地图缩放
 map.addControl(new BMap.NavigationControl());
-map.enableScrollWheelZoom();//启动鼠标滚轮缩放地图
-map.enableKeyboard();//启动键盘操作地图
-//map.setZoom(15);
+//启动鼠标滚轮缩放地图
+map.enableScrollWheelZoom();
+//启动键盘操作地图
+map.enableKeyboard();
+//存储显示路段拥堵情况的线条的数组
 var pts=new Array();
+//设置路网中数据的条数
 var length;
 $.ajax({
-   url:"/show/getroad",
-   type:"POST",
-   //dataType:"json",
-   async:true,
-   success:function(data)
-   {
-     var result = eval("("+data+")");
-     length=result.length;
-     var cc=result[0]["sposition"];
-     var cc1=cc.split(",");
-     var scc=new BMap.Point(Number(cc1[0]),Number(cc1[1]));
-     map.centerAndZoom(scc,12);
-     for(var i=0;i<result.length;i++)
-    {
-     pts[i]=0;
-    }
-     var driving=new BMap.DrivingRoute(map, {policy:BMAP_DRIVING_POLICY_LEAST_DISTANCE});
-    for(var i=0;i<result.length;i++)
-     { 
-          var num=result[i]["sposition"];
+       //设置URL
+       url:"/show/getroad",
+       //设置数据传输方式
+       type:"POST",
+       //设置为异步传输
+       async:true,
+       //接收返回值
+       success:function(data)
+       {
+        //获取路网数据表
+        var result = eval("("+data+")");
+        //获取数据表的条数
+        length=result.length;
+        //获取第一个点位的经纬度
+        var sp=result[0]["sposition"];
+        var sp1=sp.split(",");
+        var start_point=new BMap.Point(Number(sp1[0]),Number(sp1[1]));
+        //设置中心点
+        map.centerAndZoom(start_point,12);
+
+       for(var i=0;i<result.length;i++)
+       {
+         pts[i]=0;
+       }
+       //设置路线提取方式为驾车方式
+      var driving=new BMap.DrivingRoute(map, {policy:BMAP_DRIVING_POLICY_LEAST_DISTANCE});
+      //遍历路网中的所有数据
+      for(var i=0;i<result.length;i++)
+      { 
+        //获取起点经纬度
+        var num=result[i]["sposition"];
         var num1=num.split(",");
         var spoint=new BMap.Point(Number(num1[0]),Number(num1[1]));
+        //获取终点经纬度
         var num=result[i]["eposition"];
         var num2=num.split(",");
         var epoint=new BMap.Point(Number(num2[0]),Number(num2[1]));
-         driving.search(spoint, epoint);  
+        //进行路线提取
+        driving.search(spoint, epoint);  
       }
+      //路线提取回调函数
       driving.setSearchCompleteCallback(function(){
         var index=0;
-        var p=driving.getResults().getPlan(0).getRoute(0).getPath(); //通过�?车实例，获得一系列点的数组
+        //获取道路的路线
+        var roadinfo=driving.getResults().getPlan(0).getRoute(0).getPath(); 
+        //获取起点经纬度
         var start=driving.getResults().getStart().point;
+        //获取终点经纬度
         var end=driving.getResults().getEnd().point;
-        var pp=new BMap.Polyline(p);
-        pp.setStrokeColor("green");
-        pp.setStrokeWeight(6);
-        map.addOverlay(pp);
+        //初始化一个线条和道路对应
+        var road=new BMap.Polyline(roadinfo);
+        //设置线条颜色
+        road.setStrokeColor("green");
+        //设置线条粗细
+        road.setStrokeWeight(6);
+        //将线条添加到道路上
+        map.addOverlay(road);
+        //将该线条插入数组中，在数组中的编号和路段编号对应
         for(var i=0;i<result.length;i++)
         {
           var st=result[i]["sposition"];
@@ -73,13 +99,14 @@ $.ajax({
           if((Number(st1[0])==start.lng)&&(Number(st1[1])==start.lat)&&(Number(ed1[0])==end.lng)&&(Number(ed1[1])==end.lat))
           {
                
-                 pts.splice(i,1,pp);
+                 pts.splice(i,1,road);
           }
         }
       });
     }
 
 });
+//根据道路拥堵等级改变道路的颜色
 function changeColor()
   {
    $.ajax({
@@ -110,6 +137,7 @@ function changeColor()
                   }
                               }});
   }
+//设置更新时间为1秒
 setInterval(changeColor,60000);
 </script>
 </body>
