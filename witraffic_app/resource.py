@@ -8,10 +8,10 @@ from pymongo import MongoClient as Client
 import re
 import json
 
-
+#注意：本脚本开启RESTFUL接口服务，提供访问url，不涉及计算，具体指标的计算逻辑请看traffic_index.py
 
 define("port", default=8800, help="run on the given port", type=int)
-#速度
+#速度接口
 class SpeedHandler_for_URI(tornado.web.RequestHandler):
     #连接MongoClient
     client=Client()   #为空则为默认设置 （'localhost',27017）
@@ -34,7 +34,7 @@ class SpeedHandler_for_URI(tornado.web.RequestHandler):
             jsonstr=json.dumps(result)
             self.write(jsonstr)
 
-# 全天速度
+# 全天速度接口
 class SpeedHandler_for_WholeDay(tornado.web.RequestHandler):
     #连接MongoClient
     client=Client()   #为空则为默认设置 （'localhost',27017）
@@ -55,9 +55,7 @@ class SpeedHandler_for_WholeDay(tornado.web.RequestHandler):
          self.write(string)
 
 
-
-
-#车流量
+#车流量接口
 class MaccountHandler_for_URI(tornado.web.RequestHandler):
     #连接MongoClient
     client=Client()   #为空则为默认设置 （'localhost',27017）
@@ -80,7 +78,7 @@ class MaccountHandler_for_URI(tornado.web.RequestHandler):
             jsonstr=json.dumps(result)
             self.write(jsonstr)
 
-# 全天车流量
+# 全天车流量接口
 class MaccountHandler_for_WholeDay(tornado.web.RequestHandler):
     #连接MongoClient
     client=Client()   #为空则为默认设置 （'localhost',27017）
@@ -100,7 +98,7 @@ class MaccountHandler_for_WholeDay(tornado.web.RequestHandler):
          string=json.dumps(dict)
          self.write(string)
 
-#拥堵等级
+#拥堵等级接口
 class StateHandler_for_URI(tornado.web.RequestHandler):
     #连接MongoClient
     client=Client()   #为空则为默认设置 （'localhost',27017）
@@ -123,7 +121,7 @@ class StateHandler_for_URI(tornado.web.RequestHandler):
             jsonstr=json.dumps(result)
             self.write(jsonstr)
 
-#拥堵指数
+#拥堵指数接口
 class CongestionIndexHandler_for_URI(tornado.web.RequestHandler):
     #连接MongoClient
     client=Client()   #为空则为默认设置 （'localhost',27017）
@@ -146,7 +144,7 @@ class CongestionIndexHandler_for_URI(tornado.web.RequestHandler):
             jsonstr=json.dumps(result)
             self.write(jsonstr)
 
-#全路网交通指数
+#全路网交通指数接口
 class TrafficIndexHandler_for_URI(tornado.web.RequestHandler):
     #连接MongoClient
     client=Client()   #为空则为默认设置 （'localhost',27017）
@@ -162,7 +160,7 @@ class TrafficIndexHandler_for_URI(tornado.web.RequestHandler):
         jsonstr=json.dumps(result)
         self.write(jsonstr)
 
-# 全天全路网交通指数
+# 全天全路网交通指数接口
 class TrafficIndexHandler_for_WholeDay(tornado.web.RequestHandler):
     #连接MongoClient
     client=Client()   #为空则为默认设置 （'localhost',27017）
@@ -183,7 +181,7 @@ class TrafficIndexHandler_for_WholeDay(tornado.web.RequestHandler):
          string=json.dumps(dict)
          self.write(string)
 
-#全路网拥堵里程比例
+#全路网拥堵里程比例接口
 class CongestionRateHandler_for_URI(tornado.web.RequestHandler):
     #连接MongoClient
     client=Client()   #为空则为默认设置 （'localhost',27017）
@@ -200,7 +198,7 @@ class CongestionRateHandler_for_URI(tornado.web.RequestHandler):
         self.write(jsonstr)
 
 
-#区域交通指数
+#区域交通指数接口
 class AreaIndexHandler_for_URI(tornado.web.RequestHandler):
     #连接MongoClient
     client=Client()   #为空则为默认设置 （'localhost',27017）
@@ -227,7 +225,7 @@ class AreaIndexHandler_for_URI(tornado.web.RequestHandler):
             self.write(jsonstr)
 
 
-
+#速度接口（含参请求样例）
 class SpeedHandler(tornado.web.RequestHandler):
      #连接MongoClient
     client=Client()   #为空则为默认设置 （'localhost',27017）
@@ -236,7 +234,6 @@ class SpeedHandler(tornado.web.RequestHandler):
     #连接聚集（collection） 相当于关系型数据库里的表
     collection=db.speed  #如果存在连接，不存在创建
     #post方法
-
     def post(self):
         segmentid = self.get_argument('segmentid','all')
         callback=self.get_argument('callback')
@@ -253,7 +250,6 @@ class SpeedHandler(tornado.web.RequestHandler):
             del result['_id']
             jsonstr=json.dumps(result)
             self.write(str(callback)+'('+jsonstr+');')
-
     #get方法
     def get(self):
         segmentid = self.get_argument('segmentid','all')
@@ -277,6 +273,7 @@ class SpeedHandler(tornado.web.RequestHandler):
 if __name__ == "__main__":
     tornado.options.parse_command_line()
     app = tornado.web.Application(
+        #配置urL与数据的映射句柄
         handlers=[
             (r"/wifitraffic/speed",SpeedHandler),
             (r"/wifitraffic/speed_by_uri/(\w+)", SpeedHandler_for_URI),
@@ -289,11 +286,12 @@ if __name__ == "__main__":
             (r"/wifitraffic/speed_by_uri/bydate/(\w+)",SpeedHandler_for_WholeDay),
             (r"/wifitraffic/maccount_by_uri/bydate/(\w+)",MaccountHandler_for_WholeDay),
             (r"/wifitraffic/traffic_state_by_uri/traffic_index/bydate/(\w+)",TrafficIndexHandler_for_WholeDay),
-
         ]
     )
     http_server = tornado.httpserver.HTTPServer(app)
+    #配置监听端口
     http_server.listen(options.port)
+    #服务启动
     tornado.ioloop.IOLoop.instance().start()
 
 
