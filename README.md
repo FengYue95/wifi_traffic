@@ -6,6 +6,6 @@
 * 系统部署教程：https://wifitraffic.github.io/wifi_traffic/index.html
 * 技术白皮书：https://wifitraffic.github.io/wifi_traffic/whitePaper.html
 * 产品说明书：https://wifitraffic.github.io/wifi_traffic/specification.html
-* 用户使用手册（含在线测试）：http://139.129.110.99:81/api_doc/api_doc.html
+* 数据API手册（含在线测试）：http://139.129.110.99:81/api_doc/api_doc.html
 * 部署定位app下载：https://github.com/wifiTraffic/wifi_traffic/blob/master/app-debug.apk
 
