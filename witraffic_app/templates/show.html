@@ -51,7 +51,6 @@ $.ajax({
         var start_point=new BMap.Point(Number(sp1[0]),Number(sp1[1]));
         //设置中心点
         map.centerAndZoom(start_point,12);
-
        for(var i=0;i<result.length;i++)
        {
          pts[i]=0;
@@ -89,22 +88,10 @@ $.ajax({
         road.setStrokeWeight(6);
         //将线条添加到道路上
         map.addOverlay(road);
-        //将该线条插入数组中，在数组中的编号和路段编号对应
-        for(var i=0;i<result.length;i++)
-        {
-          var st=result[i]["sposition"];
-          var st1=st.split(",");
-          var ed=result[i]["eposition"];
-          var ed1=ed.split(",");
-          if((Number(st1[0])==start.lng)&&(Number(st1[1])==start.lat)&&(Number(ed1[0])==end.lng)&&(Number(ed1[1])==end.lat))
-          {
-               
-                 pts.splice(i,1,road);
-          }
-        }
+        //将该线条插入数组中
+        pts.push(pp);
       });
     }
-
 });
 //根据道路拥堵等级改变道路的颜色
 function changeColor()
@@ -137,7 +124,7 @@ function changeColor()
                   }
                               }});
   }
-//设置更新时间为1秒
+//设置更新时间为1分钟
 setInterval(changeColor,60000);
 </script>
 </body>
