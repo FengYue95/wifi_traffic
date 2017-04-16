@@ -52,9 +52,9 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
         os.makedirs(resultfolder+segmentid)
 
     #候选集时间片长度,单位分钟
-    T=distance*0.02
+    T=20
     #计算速度用的数据时间片长度t
-    t=T
+    t=10
     begintime=current_time-60*T
     endtime=current_time
 
@@ -116,7 +116,7 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
     #经过两点的mac信息
     middle_df=pd.DataFrame({'mac':output_mac,'speed':output_speed,'time':output_time})
     #速度过滤阈值下限
-    min_speed_limit=0
+    min_speed_limit=8
     #速度过滤阈值上限
     max_speed_limit=maxspeed
     #速度过滤
@@ -161,12 +161,6 @@ def task(date,current_time,seg,sourcefolder,resultfolder,his_df):
     statistic_df=statistic_df.sort_values(by=['mac'])
     #历史统计数据写入对应路段文件夹下
     statistic_df.to_csv(resultfolder+segmentid+'/'+'history_statistic_'+str(endtime),sep='|',index=None,header=None)
-
-    #聚类并获得结果
-    target_mac_set=clusting(resultfolder+segmentid+'/'+'history_statistic_'+str(endtime))
-    #提取目标mac的记录
-    middle_df=middle_df[middle_df.mac.isin(target_mac_set)]
-
 
     #路段速度确定
     if mac_count<10:
@@ -261,10 +255,12 @@ def sonthread(input):
 def fatherthread():
 
     current_time=int(time.time())
+    #current_time=1492297200
     #当前日期，格式yyyymmdd
     date=timestamp2date(current_time)
     #探针数据目录
-    sourcefolder=get_current_dir()+"/WiFiData/"
+    sourcefolder="/home/wicloud/ywbrtdata/"
+    #sourcefolder="/mnt/home/zhangyunlong/ywbrt/ywbrtdata/"
     #数据处理结果存放目录
     resultfolder=get_current_dir()+"/data/wifiresult/"
 
